@@ -77,3 +77,17 @@ docker run -p 8080:8080 -e GEMINI_API_KEY=your_key archflow
 ## 배포 및 운영
 
 Render 또는 Koyeb 같은 컨테이너 배포 환경에 바로 적합하도록 구성되었으며, `GEMINI_API_KEY` 환경 변수와 `GET /api/health` 헬스 체크를 통해 운영 노출이 가능하도록 설계했습니다.
+
+## 아키텍처 결정 기록 (ADR / Troubleshooting)
+
+### ADR 1: 초안 생성 후 Self-Reflection 검토 파이프라인을 채택한 이유
+단일 단계로 LLM에게 바로 결과를 요청하면 모델이 환각을 일으키거나 구조적 일관성을 잃을 수 있습니다. 따라서 ArchFlow는 첫 번째 단계에서 설계 초안을 생성하고, 두 번째 단계에서 시니어 아키텍트 관점으로 불일치와 누락 기능을 검토하는 2단계 파이프라인을 도입했습니다. 이 방식은 생성 결과의 품질과 논리적 무결성을 동시에 높이는 데 효과적입니다.
+
+### ADR 2: 외부 AI API 연동의 불안정성을 백엔드에서 방어한 방식
+Gemini API는 Rate Limit, 응답 지연, JSON 파싱 오류 등 다양한 운영 리스크를 동반합니다. ArchFlow는 Bucket4j 기반 IP 제한, AOP 기반 응답 지연 추적, JSON Sanitization, 그리고 예외 전용 예외 처리 계층을 통해 이러한 불안정성을 백엔드 서비스 레벨에서 제어하도록 설계했습니다. 이를 통해 LLM 호출이 단순한 외부 의존성으로 남지 않고, 운영 가능한 서비스 컴포넌트로 안정화되었습니다.
+
+## 향후 개선 로드맵 (To-Do / Roadmap)
+
+- [ ] Testcontainers 또는 WireMock을 활용한 외부 AI API 격리 및 통합 테스트 환경 구성
+- [ ] Prometheus / Grafana 연동을 통한 AI API 지연 시간 및 토큰 소모량 메트릭 시각화
+- [ ] Circuit Breaker(Resilience4j) 도입을 통한 AI 서비스 장애 격리 및 Fallback 응답 구현
