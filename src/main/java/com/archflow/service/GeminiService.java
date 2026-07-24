@@ -133,7 +133,8 @@ public class GeminiService {
 
         try {
             return restClient.post()
-                .uri(url + (url.contains("?") ? "&" : "?") + "key={apiKey}", apiKey)
+                .uri(url)
+                .header("x-goog-api-key", apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(payload)
                 .retrieve()

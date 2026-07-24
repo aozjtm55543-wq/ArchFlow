@@ -2,6 +2,8 @@
 
 ArchFlow는 Gemini API로 프로젝트 설계 문서를 생성하고 검토하는 AI-Native 서비스입니다. LLM 출력은 신뢰하지 않는다는 전제에서 DTO 계약 검증, 안전한 화면 렌더링, 요청 제한, 타임아웃, 성능 추적 및 표준 오류 응답을 백엔드와 UI에 적용했습니다.
 
+> 포트폴리오 관점의 문제·설계·데모 흐름은 [PORTFOLIO.md](docs/PORTFOLIO.md)에서 확인할 수 있습니다.
+
 ## 🚀 핵심 아키텍처 및 트러블슈팅 (FinOps & DevOps)
 
 ### LLM API 비용 보호 및 어뷰징 방어 (FinOps)
@@ -26,20 +28,14 @@ Render와 같은 무료 클라우드 환경에서 콜드 스타트 문제를 완
 
 ## 아키텍처
 
-```text
-Browser
-  |
-  v
-Spring Boot Controller
-  |
-  v
-GeminiService
-  |-> DTO Mapping / JSON Sanitization
-  |-> Rate Limiting Filter
-  |-> AOP Latency Tracing
-  |-> Self-Reflection Analysis
-  |
-  +-> Gemini API
+```mermaid
+flowchart LR
+    Browser --> RateLimitFilter
+    RateLimitFilter --> ProjectController
+    ProjectController --> GeminiService
+    GeminiService --> GeminiAPI["Gemini API"]
+    GeminiService --> Contract["JSON 정제·DTO 계약 검증"]
+    GeminiService -. "지연 시간" .-> AOP["AOP 성능 로그"]
 ```
 
 ## 기술 스택
@@ -83,7 +79,7 @@ docker run -p 8080:8080 -e GEMINI_API_KEY=your_key archflow
 
 ## 배포 및 운영
 
-Render 또는 Koyeb 같은 컨테이너 기반 배포 환경에 적합하도록 구성했습니다. `GEMINI_API_KEY`와 선택적 `CORS_ALLOWED_ORIGINS`, `GEMINI_CONNECT_TIMEOUT_MS`, `GEMINI_READ_TIMEOUT_MS` 환경 변수를 설정할 수 있으며, `GET /api/health` 헬스 체크를 제공합니다.
+Render 또는 Koyeb 같은 컨테이너 기반 배포 환경에 적합하도록 구성했습니다. `GEMINI_API_KEY`와 선택적 `CORS_ALLOWED_ORIGINS`, `GEMINI_CONNECT_TIMEOUT_MS`, `GEMINI_READ_TIMEOUT_MS` 환경 변수를 설정할 수 있으며, `GET /api/health` 헬스 체크를 제공합니다. API 키는 URL이 아닌 요청 헤더로 전달합니다.
 
 ## 아키텍처 결정 기록 (ADR / Troubleshooting)
 

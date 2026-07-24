@@ -41,7 +41,8 @@ class GeminiServiceTest {
         RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
 
         when(restClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.<Object[]>any())).thenReturn(requestBodySpec);
+        when(requestBodyUriSpec.uri(org.mockito.ArgumentMatchers.anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(org.mockito.ArgumentMatchers.eq("x-goog-api-key"), org.mockito.ArgumentMatchers.eq("test-key"))).thenReturn(requestBodySpec);
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
         when(requestBodySpec.body(org.mockito.ArgumentMatchers.<Object>any())).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
@@ -66,7 +67,8 @@ class GeminiServiceTest {
         RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
 
         when(restClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.<Object[]>any())).thenReturn(requestBodySpec);
+        when(requestBodyUriSpec.uri(org.mockito.ArgumentMatchers.anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(org.mockito.ArgumentMatchers.eq("x-goog-api-key"), org.mockito.ArgumentMatchers.eq("test-key"))).thenReturn(requestBodySpec);
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
         when(requestBodySpec.body(org.mockito.ArgumentMatchers.<Object>any())).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
