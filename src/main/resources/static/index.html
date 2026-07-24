@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ArchFlow AI Architect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100">
+<div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.2),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(167,139,250,0.2),_transparent_30%)]">
+    <div class="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 lg:flex-row lg:px-8">
+        <section class="w-full lg:w-[38%]">
+            <div class="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/40 backdrop-blur">
+                <div class="mb-6">
+                    <p class="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-400">ArchFlow</p>
+                    <h1 class="mt-2 text-3xl font-semibold">AI 아키텍트가 프로젝트 설계를 자동화합니다</h1>
+                    <p class="mt-3 text-sm leading-6 text-slate-400">프로젝트 요구사항을 입력하면 README, API 명세, DB 구조, 폴더 구조와 개발 체크리스트를 한 번에 생성합니다.</p>
+                </div>
+                <form id="generateForm" class="space-y-4">
+                    <div>
+                        <label class="mb-2 block text-sm text-slate-300">프로젝트 이름</label>
+                        <input id="projectName" class="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none ring-0" placeholder="예: 커머스 플랫폼" required />
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm text-slate-300">간단한 설명</label>
+                        <textarea id="description" class="min-h-24 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none" placeholder="서비스 목표와 핵심 기능을 설명해 주세요" required></textarea>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm text-slate-300">기술 스택</label>
+                        <input id="techStack" class="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none" placeholder="Spring Boot, React, PostgreSQL" required />
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm text-slate-300">요구 기능 (쉼표 구분)</label>
+                        <input id="requiredFeatures" class="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm outline-none" placeholder="로그인, 결제, 알림" />
+                    </div>
+                    <button id="submitButton" type="submit" class="flex w-full items-center justify-center rounded-2xl bg-cyan-500 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400">
+                        <span id="buttonText">AI 아키텍트에게 개발 문서 요청하기</span>
+                    </button>
+                </form>
+                <div id="loadingState" class="mt-6 hidden rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm text-cyan-200">
+                    <div class="flex items-center gap-3">
+                        <div class="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent"></div>
+                        <span>시니어 AI 아키텍트가 프로젝트 구조를 설계하고 있습니다... (약 10~15초 소요)</span>
+                    </div>
+                </div>
+                <div id="errorBox" class="mt-4 hidden rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200"></div>
+            </div>
+        </section>
+
+        <section class="w-full lg:w-[62%]">
+            <div class="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl shadow-slate-950/40 backdrop-blur">
+                <div class="mb-6 flex items-center justify-between gap-4">
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.3em] text-violet-400">Result</p>
+                        <h2 class="mt-1 text-2xl font-semibold">설계 문서 및 검토 결과</h2>
+                    </div>
+                </div>
+                <div id="analysisBanner" class="mb-4 hidden rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-200"></div>
+                <div class="flex flex-wrap gap-2">
+                    <button data-tab="readme" class="tab-button rounded-full border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300">README</button>
+                    <button data-tab="api" class="tab-button rounded-full border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300">API 명세</button>
+                    <button data-tab="db" class="tab-button rounded-full border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300">DB 구조</button>
+                    <button data-tab="folder" class="tab-button rounded-full border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300">폴더 구조</button>
+                    <button data-tab="checklist" class="tab-button rounded-full border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300">개발 체크리스트</button>
+                </div>
+                <div id="resultsPanel" class="mt-6 rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+                    <p class="text-sm text-slate-400">문서가 생성되면 여기에 결과가 표시됩니다.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+<script>
+const state = {
+    currentTab: 'readme',
+    blueprint: null,
+    analysis: null
+};
+
+const form = document.getElementById('generateForm');
+const submitButton = document.getElementById('submitButton');
+const buttonText = document.getElementById('buttonText');
+const loadingState = document.getElementById('loadingState');
+const errorBox = document.getElementById('errorBox');
+const resultsPanel = document.getElementById('resultsPanel');
+const analysisBanner = document.getElementById('analysisBanner');
+
+function setLoading(isLoading) {
+    submitButton.disabled = isLoading;
+    loadingState.classList.toggle('hidden', !isLoading);
+    buttonText.textContent = isLoading ? '문서를 생성하는 중...' : 'AI 아키텍트에게 개발 문서 요청하기';
+}
+
+function showError(message) {
+    errorBox.textContent = message;
+    errorBox.classList.remove('hidden');
+}
+
+function hideError() {
+    errorBox.classList.add('hidden');
+}
+
+function renderTab() {
+    if (!state.blueprint) {
+        resultsPanel.innerHTML = '<p class="text-sm text-slate-400">문서가 생성되면 여기에 결과가 표시됩니다.</p>';
+        return;
+    }
+
+    const tab = state.currentTab;
+    if (tab === 'readme') {
+        renderReadme();
+    } else if (tab === 'api') {
+        renderApi();
+    } else if (tab === 'db') {
+        renderDb();
+    } else if (tab === 'folder') {
+        renderFolder();
+    } else if (tab === 'checklist') {
+        renderChecklist();
+    }
+}
+
+function renderReadme() {
+    const readme = state.blueprint.readme;
+    resultsPanel.innerHTML = `
+        <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-lg font-semibold">README</h3>
+            <div class="flex gap-2">
+                <button onclick="copyCurrentContent('readme')" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">📋 클립보드에 복사</button>
+                <button onclick="downloadMarkdown('readme')" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">💾 Markdown (.md) 다운로드</button>
+            </div>
+        </div>
+        <div class="space-y-3 text-sm text-slate-300">
+            <p><strong>개요</strong><br>${readme.overview}</p>
+            <div>
+                <strong>핵심 기능</strong>
+                <ul class="mt-2 list-disc pl-5">${readme.features.map((item) => `<li>${item}</li>`).join('')}</ul>
+            </div>
+            <div>
+                <strong>시작 가이드</strong>
+                <ul class="mt-2 list-disc pl-5">${readme.gettingStarted.map((item) => `<li>${item}</li>`).join('')}</ul>
+            </div>
+        </div>
+    `;
+}
+
+function renderApi() {
+    const apis = state.blueprint.apiSpecifications || [];
+    resultsPanel.innerHTML = `
+        <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-lg font-semibold">API 명세</h3>
+            <div class="flex gap-2">
+                <button onclick="copyCurrentContent('api')" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">📋 클립보드에 복사</button>
+                <button onclick="downloadMarkdown('api')" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">💾 Markdown (.md) 다운로드</button>
+            </div>
+        </div>
+        <div class="space-y-3">
+            ${apis.map((api) => `
+                <div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3 text-sm text-slate-300">
+                    <div class="flex items-center justify-between">
+                        <strong>${api.domain}</strong>
+                        <span class="rounded-full bg-cyan-500/20 px-2 py-1 text-cyan-300">${api.method}</span>
+                    </div>
+                    <p class="mt-2">${api.endpoint}</p>
+                    <p class="mt-2 text-slate-400">${api.summary}</p>
+                    <p class="mt-2 text-xs text-slate-500">인증 필요: ${api.authRequired ? '예' : '아니오'}</p>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function renderDb() {
+    const tables = state.blueprint.databaseSchema || [];
+    resultsPanel.innerHTML = `
+        <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-lg font-semibold">DB 구조</h3>
+            <div class="flex gap-2">
+                <button onclick="copyCurrentContent('db')" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">📋 클립보드에 복사</button>
+                <button onclick="downloadMarkdown('db')" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">💾 Markdown (.md) 다운로드</button>
+            </div>
+        </div>
+        <div class="space-y-3">
+            ${tables.map((table) => `
+                <div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3 text-sm text-slate-300">
+                    <strong>${table.tableName}</strong>
+                    <p class="mt-1 text-slate-400">${table.description}</p>
+                    <ul class="mt-2 list-disc pl-5">
+                        ${table.columns.map((column) => `<li>${column.name} (${column.dataType})</li>`).join('')}
+                    </ul>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function renderFolder() {
+    const folders = state.blueprint.directoryStructure || [];
+    resultsPanel.innerHTML = `
+        <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-lg font-semibold">폴더 구조</h3>
+            <div class="flex gap-2">
+                <button onclick="copyCurrentContent('folder')" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">📋 클립보드에 복사</button>
+                <button onclick="downloadMarkdown('folder')" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">💾 Markdown (.md) 다운로드</button>
+            </div>
+        </div>
+        <ul class="space-y-2 text-sm text-slate-300">
+            ${folders.map((folder) => `<li class="rounded-lg border border-slate-800 bg-slate-900/70 p-3">${folder.path} - ${folder.role}</li>`).join('')}
+        </ul>
+    `;
+}
+
+function renderChecklist() {
+    const checklist = state.blueprint.developmentChecklist || [];
+    resultsPanel.innerHTML = `
+        <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-lg font-semibold">개발 체크리스트</h3>
+            <div class="flex gap-2">
+                <button onclick="copyCurrentContent('checklist')" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">📋 클립보드에 복사</button>
+                <button onclick="downloadMarkdown('checklist')" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">💾 Markdown (.md) 다운로드</button>
+            </div>
+        </div>
+        <div class="space-y-3">
+            ${checklist.map((item) => `
+                <div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3 text-sm text-slate-300">
+                    <strong>${item.phase}</strong>
+                    <ul class="mt-2 list-disc pl-5">
+                        ${item.tasks.map((task) => `<li>${task}</li>`).join('')}
+                    </ul>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function renderAnalysisBanner() {
+    if (!state.analysis) {
+        analysisBanner.classList.add('hidden');
+        return;
+    }
+
+    analysisBanner.innerHTML = `
+        <div class="font-semibold">🔍 AI 아키텍트의 냉철한 검토 리포트</div>
+        <div class="mt-2 space-y-1">
+            <p><strong>불일치 경고:</strong> ${state.analysis.consistencyIssues.join(', ')}</p>
+            <p><strong>추천 누락 기능:</strong> ${state.analysis.recommendedMissingFeatures.join(', ')}</p>
+            <p><strong>예상 난이도:</strong> ${state.analysis.difficultyLevel}</p>
+            <p><strong>기술적 병목:</strong> ${state.analysis.technicalBottleneck}</p>
+        </div>
+    `;
+    analysisBanner.classList.remove('hidden');
+}
+
+function getActiveTabContent() {
+    if (state.currentTab === 'readme') {
+        return renderMarkdownForReadme();
+    }
+    if (state.currentTab === 'api') {
+        return renderMarkdownForApi();
+    }
+    if (state.currentTab === 'db') {
+        return renderMarkdownForDb();
+    }
+    if (state.currentTab === 'folder') {
+        return renderMarkdownForFolder();
+    }
+    return renderMarkdownForChecklist();
+}
+
+function renderMarkdownForReadme() {
+    const readme = state.blueprint.readme;
+    return `# README\n\n## 개요\n${readme.overview}\n\n## 핵심 기능\n${readme.features.map((item) => `- ${item}`).join('\n')}\n\n## 시작 가이드\n${readme.gettingStarted.map((item) => `- ${item}`).join('\n')}`;
+}
+
+function renderMarkdownForApi() {
+    return `# API 명세\n\n${(state.blueprint.apiSpecifications || []).map((api) => `## ${api.domain}\n- Method: ${api.method}\n- Endpoint: ${api.endpoint}\n- Summary: ${api.summary}\n- Auth Required: ${api.authRequired ? 'Yes' : 'No'}`).join('\n\n')}`;
+}
+
+function renderMarkdownForDb() {
+    return `# DB 구조\n\n${(state.blueprint.databaseSchema || []).map((table) => `## ${table.tableName}\n${table.description}\n${table.columns.map((col) => `- ${col.name} (${col.dataType})`).join('\n')}`).join('\n\n')}`;
+}
+
+function renderMarkdownForFolder() {
+    return `# 폴더 구조\n\n${(state.blueprint.directoryStructure || []).map((folder) => `- ${folder.path}: ${folder.role}`).join('\n')}`;
+}
+
+function renderMarkdownForChecklist() {
+    return `# 개발 체크리스트\n\n${(state.blueprint.developmentChecklist || []).map((item) => `## ${item.phase}\n${item.tasks.map((task) => `- ${task}`).join('\n')}`).join('\n\n')}`;
+}
+
+async function copyCurrentContent(tabName) {
+    const content = getActiveTabContent();
+    await navigator.clipboard.writeText(content);
+    alert('클립보드에 복사되었습니다.');
+}
+
+function downloadMarkdown(tabName) {
+    const content = getActiveTabContent();
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${tabName || 'archflow'}-document.md`;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+function attachTabHandlers() {
+    document.querySelectorAll('.tab-button').forEach((button) => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.tab-button').forEach((item) => item.classList.remove('bg-cyan-500', 'text-slate-950'));
+            button.classList.add('bg-cyan-500', 'text-slate-950');
+            state.currentTab = button.dataset.tab;
+            renderTab();
+        });
+    });
+}
+
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    hideError();
+    setLoading(true);
+
+    const payload = {
+        projectName: document.getElementById('projectName').value,
+        description: document.getElementById('description').value,
+        techStack: document.getElementById('techStack').value,
+        requiredFeatures: document.getElementById('requiredFeatures').value.split(',').map((item) => item.trim()).filter(Boolean)
+    };
+
+    try {
+        const generateResponse = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!generateResponse.ok) {
+            const errorBody = await generateResponse.json();
+            throw new Error(errorBody.message || '문서 생성에 실패했습니다.');
+        }
+
+        state.blueprint = await generateResponse.json();
+        renderTab();
+
+        const analysisResponse = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectBlueprint: state.blueprint })
+        });
+
+        if (analysisResponse.ok) {
+            state.analysis = await analysisResponse.json();
+            renderAnalysisBanner();
+        }
+    } catch (error) {
+        showError(error.message || '요청 중 문제가 발생했습니다.');
+    } finally {
+        setLoading(false);
+    }
+});
+
+attachTabHandlers();
+renderTab();
+</script>
+</body>
+</html>

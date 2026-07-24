@@ -1,0 +1,9 @@
+target/
+build/
+.git/
+.env
+*.log
+application-secret.yml
+.DS_Store
+.idea/
+.vscode/
