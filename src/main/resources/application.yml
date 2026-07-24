@@ -1,3 +1,9 @@
 gemini:
   api-key: ${GEMINI_API_KEY:}
-  url: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+  url: https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent
+  connect-timeout-ms: ${GEMINI_CONNECT_TIMEOUT_MS:3000}
+  read-timeout-ms: ${GEMINI_READ_TIMEOUT_MS:30000}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8080}

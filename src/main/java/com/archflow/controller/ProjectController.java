@@ -29,7 +29,7 @@ public class ProjectController {
     }
 
     @PostMapping("/analyze")
-    public ResponseEntity<ProjectAnalyzeResponse> analyze(@RequestBody ProjectAnalyzeRequest request) {
+    public ResponseEntity<ProjectAnalyzeResponse> analyze(@Valid @RequestBody ProjectAnalyzeRequest request) {
         ProjectAnalyzeResponse response = geminiService.analyzeBlueprint(request);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }

@@ -11,6 +11,7 @@ import com.archflow.dto.request.ProjectGenerateRequest;
 import com.archflow.dto.response.ProjectAnalyzeResponse;
 import com.archflow.dto.response.ProjectBlueprintResponse;
 import com.archflow.exception.InvalidAiResponseException;
+import com.archflow.exception.AiConfigurationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,36 +31,26 @@ class GeminiServiceTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         restClient = mock(RestClient.class);
-        geminiService = new GeminiService("test-key", "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent", objectMapper, restClient);
+        geminiService = new GeminiService("test-key", "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent", objectMapper, restClient);
     }
 
     @Test
-    void generateBlueprintShouldParseSuccessfulResponse() {
+    void generateBlueprintShouldParseSuccessfulResponse() throws Exception {
         RestClient.RequestBodyUriSpec requestBodyUriSpec = mock(RestClient.RequestBodyUriSpec.class);
         RestClient.RequestBodySpec requestBodySpec = mock(RestClient.RequestBodySpec.class);
         RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
 
         when(restClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(any())).thenReturn(requestBodySpec);
+        when(requestBodyUriSpec.uri(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.<Object[]>any())).thenReturn(requestBodySpec);
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(org.mockito.ArgumentMatchers.<Object>any())).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
-        when(responseSpec.body(String.class)).thenReturn("""
-            {
-              "candidates": [
-                {
-                  "content": {
-                    "parts": [
-                      {
-                        "text": "{\"projectSummary\":{\"title\":\"Test App\",\"description\":\"A sample app\",\"architectureReasoning\":\"Good design\"},\"readme\":{\"overview\":\"Overview\",\"features\":[\"Auth\"],\"gettingStarted\":[\"Run app\"]},\"apiSpecifications\":[],\"databaseSchema\":[],\"directoryStructure\":[],\"developmentChecklist\":[]}"
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-            """);
+        String blueprintJson = """
+            {"projectSummary":{"title":"Test App","description":"A sample app","architectureReasoning":"Good design"},"readme":{"overview":"Overview","features":["Auth"],"gettingStarted":["Run app"]},"apiSpecifications":[],"databaseSchema":[],"directoryStructure":[],"developmentChecklist":[]}
+            """;
+        when(responseSpec.body(String.class)).thenReturn("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":"
+            + objectMapper.writeValueAsString(blueprintJson) + "}]}}]}");
 
         ProjectGenerateRequest request = new ProjectGenerateRequest("Test App", "A sample app", "Spring Boot", List.of("Auth"));
         ProjectBlueprintResponse response = geminiService.generateBlueprint(request);
@@ -69,32 +60,20 @@ class GeminiServiceTest {
     }
 
     @Test
-    void analyzeBlueprintShouldThrowInvalidAiResponseExceptionWhenJsonIsMalformed() {
+    void analyzeBlueprintShouldThrowInvalidAiResponseExceptionWhenJsonIsMalformed() throws Exception {
         RestClient.RequestBodyUriSpec requestBodyUriSpec = mock(RestClient.RequestBodyUriSpec.class);
         RestClient.RequestBodySpec requestBodySpec = mock(RestClient.RequestBodySpec.class);
         RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
 
         when(restClient.post()).thenReturn(requestBodyUriSpec);
-        when(requestBodyUriSpec.uri(any())).thenReturn(requestBodySpec);
+        when(requestBodyUriSpec.uri(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.<Object[]>any())).thenReturn(requestBodySpec);
         when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(org.mockito.ArgumentMatchers.<Object>any())).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
-        when(responseSpec.body(String.class)).thenReturn("""
-            {
-              "candidates": [
-                {
-                  "content": {
-                    "parts": [
-                      {
-                        "text": "{\"consistencyIssues\": [\"A\"], \"recommendedMissingFeatures\": [\"B\"], \"difficultyLevel\": \"중\", \"technicalBottleneck\": \"C\""
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-            """);
+        String malformedJson = "{\"consistencyIssues\": [\"A\"], \"recommendedMissingFeatures\": [\"B\"], \"difficultyLevel\": \"중\", \"technicalBottleneck\": \"C\"";
+        when(responseSpec.body(String.class)).thenReturn("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":"
+            + objectMapper.writeValueAsString(malformedJson) + "}]}}]}");
 
         ProjectAnalyzeRequest request = new ProjectAnalyzeRequest(new ProjectBlueprintResponse(
             new ProjectBlueprintResponse.ProjectSummaryDto("Test", "Desc", "Reason"),
@@ -106,5 +85,13 @@ class GeminiServiceTest {
         ));
 
         assertThrows(InvalidAiResponseException.class, () -> geminiService.analyzeBlueprint(request));
+    }
+
+    @Test
+    void generateBlueprintShouldRejectMissingApiKeyBeforeCallingGemini() {
+        GeminiService serviceWithoutApiKey = new GeminiService("", "https://example.test/generate", objectMapper, restClient);
+        ProjectGenerateRequest request = new ProjectGenerateRequest("Test App", "A sample app", "Spring Boot", List.of());
+
+        assertThrows(AiConfigurationException.class, () -> serviceWithoutApiKey.generateBlueprint(request));
     }
 }

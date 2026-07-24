@@ -10,9 +10,11 @@ import com.archflow.dto.request.ProjectGenerateRequest;
 import com.archflow.dto.response.ProjectAnalyzeResponse;
 import com.archflow.dto.response.ProjectBlueprintResponse;
 import com.archflow.service.GeminiService;
+import com.archflow.service.RateLimitService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -29,6 +31,14 @@ class ProjectControllerTest {
 
     @MockBean
     private GeminiService geminiService;
+
+    @MockBean
+    private RateLimitService rateLimitService;
+
+    @BeforeEach
+    void allowRequestsThroughRateLimitFilter() {
+        when(rateLimitService.allowRequest(any())).thenReturn(true);
+    }
 
     @Test
     void generateShouldReturnOkResponse() throws Exception {
@@ -73,6 +83,15 @@ class ProjectControllerTest {
         mockMvc.perform(post("/api/generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"description\":\"Missing required fields\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void analyzeWithoutBlueprintShouldReturnBadRequest() throws Exception {
+        mockMvc.perform(post("/api/analyze")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.status").value(400));
     }

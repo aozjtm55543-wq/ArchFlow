@@ -6,6 +6,7 @@ import com.archflow.dto.request.ProjectGenerateRequest;
 import com.archflow.dto.response.ProjectAnalyzeResponse;
 import com.archflow.dto.response.ProjectBlueprintResponse;
 import com.archflow.exception.ExternalApiException;
+import com.archflow.exception.AiConfigurationException;
 import com.archflow.exception.InvalidAiResponseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -28,12 +29,9 @@ public class GeminiService {
     public GeminiService(
         @Value("${gemini.api-key}") String apiKey,
         @Value("${gemini.url}") String url,
-        ObjectMapper objectMapper
+        ObjectMapper objectMapper,
+        RestClient restClient
     ) {
-        this(apiKey, url, objectMapper, RestClient.builder().build());
-    }
-
-    public GeminiService(String apiKey, String url, ObjectMapper objectMapper, RestClient restClient) {
         this.apiKey = apiKey;
         this.url = url;
         this.objectMapper = objectMapper;
@@ -49,8 +47,7 @@ public class GeminiService {
             "systemInstruction", Map.of("parts", List.of(Map.of("text", systemPrompt))),
             "contents", List.of(Map.of("parts", List.of(Map.of("text", userPrompt)))),
             "generationConfig", Map.of(
-                "responseMimeType", "application/json",
-                "temperature", 0.2
+                "responseMimeType", "application/json"
             )
         );
 
@@ -58,7 +55,9 @@ public class GeminiService {
             String responseBody = callGemini(payload);
             String generatedText = extractGeneratedText(responseBody);
             String sanitizedJson = sanitizeResponse(generatedText);
-            return objectMapper.readValue(sanitizedJson, ProjectBlueprintResponse.class);
+            ProjectBlueprintResponse response = objectMapper.readValue(sanitizedJson, ProjectBlueprintResponse.class);
+            validateBlueprint(response);
+            return response;
         } catch (ExternalApiException exception) {
             throw exception;
         } catch (JsonProcessingException exception) {
@@ -77,8 +76,7 @@ public class GeminiService {
             "systemInstruction", Map.of("parts", List.of(Map.of("text", systemPrompt))),
             "contents", List.of(Map.of("parts", List.of(Map.of("text", userPrompt)))),
             "generationConfig", Map.of(
-                "responseMimeType", "application/json",
-                "temperature", 0.2
+                "responseMimeType", "application/json"
             )
         );
 
@@ -86,7 +84,9 @@ public class GeminiService {
             String responseBody = callGemini(payload);
             String generatedText = extractGeneratedText(responseBody);
             String sanitizedJson = sanitizeResponse(generatedText);
-            return objectMapper.readValue(sanitizedJson, ProjectAnalyzeResponse.class);
+            ProjectAnalyzeResponse response = objectMapper.readValue(sanitizedJson, ProjectAnalyzeResponse.class);
+            validateAnalysis(response);
+            return response;
         } catch (ExternalApiException exception) {
             throw exception;
         } catch (JsonProcessingException exception) {
@@ -127,20 +127,23 @@ public class GeminiService {
     }
 
     private String callGemini(Map<String, Object> payload) {
-        return restClient.post()
-            .uri(uriBuilder -> uriBuilder
-                .scheme("https")
-                .host("generativelanguage.googleapis.com")
-                .path(url.replace("https://generativelanguage.googleapis.com", ""))
-                .queryParam("key", apiKey)
-                .build())
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(payload)
-            .retrieve()
-            .onStatus(status -> status.isError(), (requestMessage, responseMessage) -> {
-                throw new ExternalApiException("Gemini API returned error status " + responseMessage.getStatusCode());
-            })
-            .body(String.class);
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new AiConfigurationException("GEMINI_API_KEY is not configured");
+        }
+
+        try {
+            return restClient.post()
+                .uri(url + (url.contains("?") ? "&" : "?") + "key={apiKey}", apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(payload)
+                .retrieve()
+                .onStatus(status -> status.isError(), (requestMessage, responseMessage) -> {
+                    throw new ExternalApiException("Gemini API returned error status " + responseMessage.getStatusCode());
+                })
+                .body(String.class);
+        } catch (RestClientException exception) {
+            throw new ExternalApiException("Gemini API call failed", exception);
+        }
     }
 
     private String extractGeneratedText(String responseBody) {
@@ -175,5 +178,35 @@ public class GeminiService {
             return trimmed.substring(start, end + 1);
         }
         return trimmed;
+    }
+
+    private void validateBlueprint(ProjectBlueprintResponse response) {
+        if (response == null
+            || response.projectSummary() == null
+            || isBlank(response.projectSummary().title())
+            || response.readme() == null
+            || isBlank(response.readme().overview())
+            || response.readme().features() == null
+            || response.readme().gettingStarted() == null
+            || response.apiSpecifications() == null
+            || response.databaseSchema() == null
+            || response.directoryStructure() == null
+            || response.developmentChecklist() == null) {
+            throw new InvalidAiResponseException("AI response did not satisfy the project blueprint contract", null);
+        }
+    }
+
+    private void validateAnalysis(ProjectAnalyzeResponse response) {
+        if (response == null
+            || response.consistencyIssues() == null
+            || response.recommendedMissingFeatures() == null
+            || isBlank(response.difficultyLevel())
+            || isBlank(response.technicalBottleneck())) {
+            throw new InvalidAiResponseException("AI response did not satisfy the analysis contract", null);
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

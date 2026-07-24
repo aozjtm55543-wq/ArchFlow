@@ -100,6 +100,20 @@ function hideError() {
     errorBox.classList.add('hidden');
 }
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function showAnalysisWarning(message) {
+    analysisBanner.textContent = message;
+    analysisBanner.classList.remove('hidden');
+}
+
 function renderTab() {
     if (!state.blueprint) {
         resultsPanel.innerHTML = '<p class="text-sm text-slate-400">문서가 생성되면 여기에 결과가 표시됩니다.</p>';
@@ -131,14 +145,14 @@ function renderReadme() {
             </div>
         </div>
         <div class="space-y-3 text-sm text-slate-300">
-            <p><strong>개요</strong><br>${readme.overview}</p>
+            <p><strong>개요</strong><br>${escapeHtml(readme.overview)}</p>
             <div>
                 <strong>핵심 기능</strong>
-                <ul class="mt-2 list-disc pl-5">${readme.features.map((item) => `<li>${item}</li>`).join('')}</ul>
+                <ul class="mt-2 list-disc pl-5">${readme.features.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
             </div>
             <div>
                 <strong>시작 가이드</strong>
-                <ul class="mt-2 list-disc pl-5">${readme.gettingStarted.map((item) => `<li>${item}</li>`).join('')}</ul>
+                <ul class="mt-2 list-disc pl-5">${readme.gettingStarted.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
             </div>
         </div>
     `;
@@ -158,11 +172,11 @@ function renderApi() {
             ${apis.map((api) => `
                 <div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3 text-sm text-slate-300">
                     <div class="flex items-center justify-between">
-                        <strong>${api.domain}</strong>
-                        <span class="rounded-full bg-cyan-500/20 px-2 py-1 text-cyan-300">${api.method}</span>
+                        <strong>${escapeHtml(api.domain)}</strong>
+                        <span class="rounded-full bg-cyan-500/20 px-2 py-1 text-cyan-300">${escapeHtml(api.method)}</span>
                     </div>
-                    <p class="mt-2">${api.endpoint}</p>
-                    <p class="mt-2 text-slate-400">${api.summary}</p>
+                    <p class="mt-2">${escapeHtml(api.endpoint)}</p>
+                    <p class="mt-2 text-slate-400">${escapeHtml(api.summary)}</p>
                     <p class="mt-2 text-xs text-slate-500">인증 필요: ${api.authRequired ? '예' : '아니오'}</p>
                 </div>
             `).join('')}
@@ -183,10 +197,10 @@ function renderDb() {
         <div class="space-y-3">
             ${tables.map((table) => `
                 <div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3 text-sm text-slate-300">
-                    <strong>${table.tableName}</strong>
-                    <p class="mt-1 text-slate-400">${table.description}</p>
+                    <strong>${escapeHtml(table.tableName)}</strong>
+                    <p class="mt-1 text-slate-400">${escapeHtml(table.description)}</p>
                     <ul class="mt-2 list-disc pl-5">
-                        ${table.columns.map((column) => `<li>${column.name} (${column.dataType})</li>`).join('')}
+                        ${table.columns.map((column) => `<li>${escapeHtml(column.name)} (${escapeHtml(column.dataType)})</li>`).join('')}
                     </ul>
                 </div>
             `).join('')}
@@ -205,7 +219,7 @@ function renderFolder() {
             </div>
         </div>
         <ul class="space-y-2 text-sm text-slate-300">
-            ${folders.map((folder) => `<li class="rounded-lg border border-slate-800 bg-slate-900/70 p-3">${folder.path} - ${folder.role}</li>`).join('')}
+            ${folders.map((folder) => `<li class="rounded-lg border border-slate-800 bg-slate-900/70 p-3">${escapeHtml(folder.path)} - ${escapeHtml(folder.role)}</li>`).join('')}
         </ul>
     `;
 }
@@ -223,9 +237,9 @@ function renderChecklist() {
         <div class="space-y-3">
             ${checklist.map((item) => `
                 <div class="rounded-xl border border-slate-800 bg-slate-900/70 p-3 text-sm text-slate-300">
-                    <strong>${item.phase}</strong>
+                    <strong>${escapeHtml(item.phase)}</strong>
                     <ul class="mt-2 list-disc pl-5">
-                        ${item.tasks.map((task) => `<li>${task}</li>`).join('')}
+                        ${item.tasks.map((task) => `<li>${escapeHtml(task)}</li>`).join('')}
                     </ul>
                 </div>
             `).join('')}
@@ -242,10 +256,10 @@ function renderAnalysisBanner() {
     analysisBanner.innerHTML = `
         <div class="font-semibold">🔍 AI 아키텍트의 냉철한 검토 리포트</div>
         <div class="mt-2 space-y-1">
-            <p><strong>불일치 경고:</strong> ${state.analysis.consistencyIssues.join(', ')}</p>
-            <p><strong>추천 누락 기능:</strong> ${state.analysis.recommendedMissingFeatures.join(', ')}</p>
-            <p><strong>예상 난이도:</strong> ${state.analysis.difficultyLevel}</p>
-            <p><strong>기술적 병목:</strong> ${state.analysis.technicalBottleneck}</p>
+            <p><strong>불일치 경고:</strong> ${state.analysis.consistencyIssues.map(escapeHtml).join(', ')}</p>
+            <p><strong>추천 누락 기능:</strong> ${state.analysis.recommendedMissingFeatures.map(escapeHtml).join(', ')}</p>
+            <p><strong>예상 난이도:</strong> ${escapeHtml(state.analysis.difficultyLevel)}</p>
+            <p><strong>기술적 병목:</strong> ${escapeHtml(state.analysis.technicalBottleneck)}</p>
         </div>
     `;
     analysisBanner.classList.remove('hidden');
@@ -336,7 +350,7 @@ form.addEventListener('submit', async (event) => {
         });
 
         if (!generateResponse.ok) {
-            const errorBody = await generateResponse.json();
+            const errorBody = await generateResponse.json().catch(() => ({}));
             throw new Error(errorBody.message || '문서 생성에 실패했습니다.');
         }
 
@@ -352,6 +366,9 @@ form.addEventListener('submit', async (event) => {
         if (analysisResponse.ok) {
             state.analysis = await analysisResponse.json();
             renderAnalysisBanner();
+        } else {
+            const errorBody = await analysisResponse.json().catch(() => ({}));
+            showAnalysisWarning(errorBody.message || '설계 문서는 생성됐지만 AI 검토를 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.');
         }
     } catch (error) {
         showError(error.message || '요청 중 문제가 발생했습니다.');
