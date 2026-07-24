@@ -1,6 +1,6 @@
 # ArchFlow
 
-ArchFlow는 Gemini API로 프로젝트 설계 문서를 생성하고 검토하는 AI-Native 서비스입니다. LLM 출력은 신뢰하지 않는다는 전제에서 DTO 계약 검증, 안전한 화면 렌더링, 요청 제한, 타임아웃, 성능 추적 및 표준 오류 응답을 백엔드와 UI에 적용했습니다.
+ArchFlow는 Gemini API로 프로젝트 설계 문서를 생성하고 검토하는 AI-Native 서비스입니다. LLM 출력은 신뢰하지 않는다는 전제에서 JSON Schema·DTO 이중 계약 검증, 프롬프트 입력 경계, 안전한 화면 렌더링, 요청 제한, 타임아웃, 요청 추적 및 표준 오류 응답을 적용했습니다.
 
 > 포트폴리오 관점의 문제·설계·데모 흐름은 [PORTFOLIO.md](docs/PORTFOLIO.md)에서 확인할 수 있습니다.
 
@@ -20,9 +20,10 @@ Render와 같은 무료 클라우드 환경에서 콜드 스타트 문제를 완
 | 영역 | 검증 포인트 | 상태 |
 | --- | --- | --- |
 | 테스트 검증 | JUnit 5와 Mockito 기반으로 컨트롤러 유효성 검증, Gemini 응답 파싱·오류 처리, IP별 요청 제한을 검증합니다. | ✅ |
-| LLM 응답 통제 | JSON MIME 응답을 요청하고, 코드 블록 제거 후 DTO 필수 필드를 검증해 계약을 만족하지 않는 응답을 거부합니다. | ✅ |
+| LLM 응답 통제 | Gemini JSON Schema와 서버 DTO 검증을 함께 적용하고, 계약을 만족하지 않는 응답을 거부합니다. | ✅ |
 | 트래픽 및 비용 보호 | Bucket4j 기반 IP당 분당 5회 제한을 적용했고, 초과 시 429 응답을 즉시 반환합니다. | ✅ |
 | 관측 가능성 | `@AiPerformanceTrace` AOP를 통해 Gemini API 호출 지연 시간을 추적하고, 8초 초과 시 WARN 로그로 슬로우 API를 감지합니다. | ✅ |
+| 요청 추적 | 모든 응답에 `X-Request-Id`를 반환하고 로그 MDC에 동일 ID를 남깁니다. | ✅ |
 
 > 운영 관점에서 ArchFlow는 단순히 AI 결과를 생성하는 애플리케이션이 아니라, LLM의 비정형성을 제어하고 비용·성능·안정성을 관리하는 AI-Native 백엔드 서비스로 설계된 프로젝트입니다.
 
@@ -34,7 +35,7 @@ flowchart LR
     RateLimitFilter --> ProjectController
     ProjectController --> GeminiService
     GeminiService --> GeminiAPI["Gemini API"]
-    GeminiService --> Contract["JSON 정제·DTO 계약 검증"]
+    GeminiService --> Contract["JSON Schema·DTO 이중 계약 검증"]
     GeminiService -. "지연 시간" .-> AOP["AOP 성능 로그"]
 ```
 
@@ -50,6 +51,7 @@ flowchart LR
 - Bucket4j
 - Spring AOP
 - Tailwind CSS, HTML 이스케이프 렌더링
+- SLF4J MDC 기반 요청 추적
 
 ## 로컬 실행
 

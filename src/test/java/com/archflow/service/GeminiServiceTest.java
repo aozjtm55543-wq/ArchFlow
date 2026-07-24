@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.archflow.dto.request.ProjectAnalyzeRequest;
@@ -14,10 +15,12 @@ import com.archflow.exception.InvalidAiResponseException;
 import com.archflow.exception.AiConfigurationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 
@@ -58,6 +61,15 @@ class GeminiServiceTest {
 
         assertEquals("Test App", response.projectSummary().title());
         assertEquals("Overview", response.readme().overview());
+
+        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(requestBodySpec).body(payloadCaptor.capture());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) payloadCaptor.getValue();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> generationConfig = (Map<String, Object>) payload.get("generationConfig");
+        assertEquals("application/json", generationConfig.get("responseMimeType"));
+        assertEquals("object", ((Map<?, ?>) generationConfig.get("responseSchema")).get("type"));
     }
 
     @Test

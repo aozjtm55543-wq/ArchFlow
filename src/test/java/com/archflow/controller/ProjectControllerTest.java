@@ -95,4 +95,15 @@ class ProjectControllerTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.status").value(400));
     }
+
+    @Test
+    void generateRejectsOversizedPromptInput() throws Exception {
+        ProjectGenerateRequest request = new ProjectGenerateRequest("x".repeat(101), "Description", "Spring Boot", List.of());
+
+        mockMvc.perform(post("/api/generate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400));
+    }
 }

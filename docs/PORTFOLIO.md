@@ -8,11 +8,12 @@ LLM이 생성한 프로젝트 설계 문서를 **신뢰 경계 밖의 입력**�
 
 | 운영 위험 | ArchFlow의 대응 |
 | --- | --- |
-| LLM이 JSON이 아닌 텍스트를 반환 | JSON MIME 요청, 코드 블록 정제, DTO 필수 계약 검증 |
+| LLM이 JSON이 아닌 텍스트를 반환 | Gemini JSON Schema, 코드 블록 정제, DTO 필수 계약 검증 |
 | AI 호출 비용과 어뷰징 | IP별 토큰 버킷 요청 제한 및 429/Retry-After 응답 |
 | 외부 API 지연 또는 실패 | 연결·응답 타임아웃, 502/503 표준 오류 응답 |
 | AI 텍스트의 브라우저 실행 위험 | 모든 동적 값 HTML 이스케이프 처리 |
 | 느린 AI 호출의 원인 추적 | AOP 기반 호출 시간 측정 및 8초 초과 경고 |
+| 사용자 문의와 서버 로그 연결 | `X-Request-Id` 응답 헤더와 MDC 로그 상관관계 |
 
 ## 동작 흐름
 
@@ -21,7 +22,7 @@ flowchart LR
     U["사용자 요구사항"] --> R["RateLimitFilter"]
     R --> C["ProjectController"]
     C --> G["GeminiService"]
-    G --> P["프롬프트·JSON 응답 요청"]
+    G --> P["입력 경계·JSON Schema 응답 요청"]
     P --> A["Gemini API"]
     A --> V["응답 정제·DTO 계약 검증"]
     V --> S["안전한 HTML 이스케이프 렌더링"]
@@ -40,8 +41,8 @@ flowchart LR
 `mvnw test`는 다음을 확인합니다.
 
 - 생성·분석 API의 정상 응답과 유효성 검증
-- Gemini 응답의 정상 파싱, 잘못된 JSON 거부, API 키 누락 처리
-- IP별 요청 제한과 429 JSON 응답
+- Gemini 응답의 정상 파싱, JSON Schema 요청, 잘못된 JSON 거부, API 키 누락 처리
+- IP별 요청 제한과 429 JSON 응답, 요청 추적 ID 반환
 
 ## 의도적으로 남긴 다음 단계
 
